@@ -3,17 +3,36 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 
+// Hardcoded Z positions spread across the entire screen
+const zPositions = [
+  { left: "8%",  bottom: "20%", size: "1.2rem", delay: 0,   duration: 5 },
+  { left: "18%", bottom: "60%", size: "2rem",   delay: 0.8, duration: 4.5 },
+  { left: "5%",  bottom: "75%", size: "1rem",   delay: 1.6, duration: 6 },
+  { left: "30%", bottom: "15%", size: "2.5rem", delay: 0.3, duration: 4 },
+  { left: "42%", bottom: "80%", size: "1.5rem", delay: 1.2, duration: 5.5 },
+  { left: "55%", bottom: "30%", size: "1.8rem", delay: 2,   duration: 4.8 },
+  { left: "65%", bottom: "70%", size: "1rem",   delay: 0.5, duration: 5 },
+  { left: "72%", bottom: "45%", size: "2.2rem", delay: 1.5, duration: 4.2 },
+  { left: "80%", bottom: "20%", size: "1.4rem", delay: 0.9, duration: 5.5 },
+  { left: "88%", bottom: "65%", size: "2rem",   delay: 2.2, duration: 4 },
+  { left: "92%", bottom: "85%", size: "1.2rem", delay: 0.4, duration: 6 },
+  { left: "25%", bottom: "90%", size: "1.6rem", delay: 1.8, duration: 4.5 },
+];
+
 export interface SleepingEyesRef {
-  openAndClose: () => void;
+  openAndClose: () => Promise<void>;
 }
 
 interface SleepingEyesProps {
   onTextReady?: () => void;
+  wakeStage?: number;
 }
 
 export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
-  function SleepingEyes({ onTextReady }, ref) {
+  function SleepingEyes({ onTextReady, wakeStage = 0 }, ref) {
     const [showContent, setShowContent] = useState(false);
+    const [zsFrozen, setZsFrozen] = useState(false);
+    const [zsFadingOut, setZsFadingOut] = useState(false);
     const leftEyeControls = useAnimation();
     const rightEyeControls = useAnimation();
 
@@ -34,6 +53,17 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
         return () => clearTimeout(timer);
       }
     }, [showContent, onTextReady]);
+
+    // Handle wakeStage changes for Z animation
+    useEffect(() => {
+      if (wakeStage >= 3) {
+        setZsFrozen(true);
+        // Fade out after freezing
+        setTimeout(() => {
+          setZsFadingOut(true);
+        }, 100);
+      }
+    }, [wakeStage]);
 
     useImperativeHandle(ref, () => ({
       openAndClose: async () => {
@@ -63,6 +93,21 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
         ]);
       },
     }));
+
+    // Calculate Z animation speed multiplier based on wakeStage
+    const getSpeedMultiplier = () => {
+      if (wakeStage === 0) return 1;
+      if (wakeStage === 1) return 2; // Slower (duration * 2)
+      if (wakeStage === 2) return 3; // Even slower
+      return 1; // Stage 3 is frozen
+    };
+
+    // Calculate Z opacity based on wakeStage
+    const getZOpacity = () => {
+      if (zsFadingOut) return 0;
+      if (wakeStage === 2) return 0.3;
+      return 1;
+    };
 
     return (
       <div className="absolute inset-0 overflow-hidden">
@@ -112,48 +157,12 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
                     />
                     {/* Lashes */}
                     <motion.g className="text-foreground/50">
-                      <path
-                        d="M 20 48 L 12 35"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 35 38 L 30 22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 52 32 L 50 16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 68 32 L 70 16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 85 38 L 90 22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 100 48 L 108 35"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
+                      <path d="M 20 48 L 12 35" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 35 38 L 30 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 52 32 L 50 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 68 32 L 70 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 85 38 L 90 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 100 48 L 108 35" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </motion.g>
                   </svg>
                 </motion.div>
@@ -186,83 +195,51 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
                     />
                     {/* Lashes */}
                     <motion.g className="text-foreground/50">
-                      <path
-                        d="M 20 48 L 12 35"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 35 38 L 30 22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 52 32 L 50 16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 68 32 L 70 16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 85 38 L 90 22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 100 48 L 108 35"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
+                      <path d="M 20 48 L 12 35" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 35 38 L 30 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 52 32 L 50 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 68 32 L 70 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 85 38 L 90 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M 100 48 L 108 35" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </motion.g>
                   </svg>
                 </motion.div>
               </motion.div>
             </div>
 
-            {/* Z's floating up from between the eyes */}
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(6)].map((_, i) => (
+            {/* Z's floating across the entire screen - hardcoded positions */}
+            <motion.div 
+              className="absolute inset-0 pointer-events-none"
+              animate={{ opacity: getZOpacity() }}
+              transition={{ duration: zsFadingOut ? 1 : 0.3 }}
+            >
+              {zPositions.map((z, i) => (
                 <motion.span
                   key={i}
                   className="absolute font-serif text-foreground/40 select-none"
                   style={{
-                    left: `calc(50% + ${(Math.random() - 0.5) * 40}px)`,
-                    top: "40%",
-                    fontSize: `${1.2 + Math.random() * 1.5}rem`,
+                    left: z.left,
+                    bottom: z.bottom,
+                    fontSize: z.size,
                   }}
                   initial={{ opacity: 0, y: 0, x: 0 }}
-                  animate={{
+                  animate={zsFrozen ? {} : {
                     opacity: [0, 0.7, 0.5, 0],
-                    y: -250 - Math.random() * 150,
-                    x: (Math.random() - 0.5) * 80,
-                    rotate: Math.random() * 30 - 15,
+                    y: -400,
+                    x: i % 2 === 0 ? 40 : -40,
+                    rotate: i % 2 === 0 ? 15 : -15,
                   }}
-                  transition={{
-                    duration: 4 + Math.random() * 2,
+                  transition={zsFrozen ? {} : {
+                    duration: z.duration * getSpeedMultiplier(),
                     repeat: Infinity,
-                    delay: i * 0.8 + Math.random() * 0.5,
+                    delay: z.delay,
                     ease: "easeOut",
                   }}
                 >
                   Z
                 </motion.span>
               ))}
-            </div>
+            </motion.div>
 
             {/* Snoring sound wave below eyes */}
             <div className="absolute left-1/2 -translate-x-1/2 top-[58%] md:top-[55%]">

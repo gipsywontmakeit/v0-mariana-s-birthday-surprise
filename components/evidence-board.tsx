@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
 interface Crime {
   id: number;
@@ -26,7 +25,7 @@ const crimes: Crime[] = [
       { label: "Constipação", isSuspeita: false, confession: "a constipação confessa: foi cúmplice." },
       { label: "Medicação", isSuspeita: true },
     ],
-    position: { top: "15%", left: "8%" },
+    position: { top: "18%", left: "8%" },
     rotate: -4,
   },
   {
@@ -36,7 +35,7 @@ const crimes: Crime[] = [
       { label: "Proteína a mais", isSuspeita: false, confession: "a proteína admite: foi cúmplice." },
       { label: "Medicação", isSuspeita: true },
     ],
-    position: { top: "12%", right: "8%" },
+    position: { top: "15%", right: "8%" },
     rotate: 3,
   },
   {
@@ -47,18 +46,18 @@ const crimes: Crime[] = [
       { label: "Cama confortável", isSuspeita: false, confession: "a cama nega tudo." },
       { label: "Sofá confortável", isSuspeita: false, confession: "o sofá também nega." },
       { label: "Tudo o que dê para encostar", isSuspeita: false, confession: "fair point." },
-      { label: "Minino sibi", isSuspeita: false, confession: "o minino era inocente. provavelmente.", hasImage: true, imageSrc: "/sibi.jpg" },
+      { label: "Mínino Sibi", isSuspeita: false, confession: "o mínino era inocente. provavelmente.", hasImage: true, imageSrc: "/sibi.jpeg" },
       { label: "Medicação", isSuspeita: true },
     ],
-    position: { top: "52%", left: "50%" },
+    position: { top: "50%", left: "50%" },
     rotate: -1,
   },
 ];
 
 // Note centers for string drawing (percentages)
 const noteCenters = [
-  { x: 18, y: 28 },  // Card 1
-  { x: 82, y: 25 },  // Card 2  
+  { x: 18, y: 32 },  // Card 1
+  { x: 82, y: 29 },  // Card 2  
   { x: 50, y: 65 },  // Card 3
 ];
 
@@ -119,33 +118,61 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
 
   return (
     <div className="fixed inset-0 overflow-hidden">
+      {/* Cork board background */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundColor: "#8B6914",
+          backgroundImage: `
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 2px,
+              rgba(0,0,0,0.03) 2px,
+              rgba(0,0,0,0.03) 4px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 2px,
+              rgba(0,0,0,0.02) 2px,
+              rgba(0,0,0,0.02) 4px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 5px,
+              rgba(139,105,20,0.1) 5px,
+              rgba(139,105,20,0.1) 10px
+            )
+          `,
+        }}
+      />
+      
+      {/* Cork noise texture */}
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          mixBlendMode: "multiply",
+        }}
+      />
+
+      {/* Dark wooden frame border */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          border: "8px solid #3d2b1f",
+          boxShadow: "inset 0 0 20px rgba(0,0,0,0.4), inset 0 0 3px rgba(0,0,0,0.6)",
+        }}
+      />
+
       {/* Vignette overlay */}
       <div
         className="absolute inset-0 pointer-events-none z-20"
         style={{
           background:
-            "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, oklch(0.08 0.01 250 / 0.7) 100%)",
-        }}
-      />
-
-      {/* Cork/fabric texture background */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: "oklch(0.12 0.01 250)",
-          backgroundImage: `
-            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")
-          `,
-          backgroundBlendMode: "soft-light",
-          opacity: 0.95,
-        }}
-      />
-
-      {/* Grain overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.7' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E")`,
+            "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
@@ -155,10 +182,60 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
         animate={{ x: mousePos.x - 12, y: mousePos.y - 12 }}
         transition={{ type: "spring", damping: 30, stiffness: 400 }}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-foreground/50">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/50">
           <circle cx="10" cy="10" r="7" />
           <path d="M15 15 L21 21" strokeLinecap="round" />
         </svg>
+      </motion.div>
+
+      {/* Sibi the detective assistant - bottom left */}
+      <motion.div
+        className="absolute bottom-4 left-4 z-10"
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.5, duration: 0.8 }}
+      >
+        <div className="relative">
+          {/* Cat image */}
+          <img
+            src="/sibi.jpeg"
+            alt="Sibi the detective cat"
+            className="w-24 md:w-32 h-auto rounded-lg shadow-lg object-cover"
+            style={{ aspectRatio: "1/1", objectFit: "cover" }}
+          />
+          
+          {/* Detective hat SVG overlay */}
+          <svg
+            className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 md:w-20 h-auto"
+            viewBox="0 0 80 40"
+          >
+            {/* Hat brim */}
+            <rect x="5" y="28" width="70" height="6" rx="2" fill="#1a1a1a" />
+            {/* Hat body */}
+            <rect x="15" y="8" width="50" height="22" rx="3" fill="#2d2d2d" />
+            {/* Hat band */}
+            <rect x="15" y="24" width="50" height="6" fill="#8B4513" />
+          </svg>
+          
+          {/* Speech bubble */}
+          <div
+            className="absolute -right-28 md:-right-36 top-2 bg-white rounded-lg px-2 py-1 shadow-md"
+            style={{ minWidth: "100px" }}
+          >
+            <p className="text-[10px] md:text-xs text-gray-700 italic font-serif whitespace-nowrap">
+              estou de olho em ti.
+            </p>
+            {/* Speech bubble tail */}
+            <div
+              className="absolute left-0 top-1/2 -translate-x-2 -translate-y-1/2 w-0 h-0"
+              style={{
+                borderTop: "6px solid transparent",
+                borderBottom: "6px solid transparent",
+                borderRight: "8px solid white",
+              }}
+            />
+          </div>
+        </div>
       </motion.div>
 
       {/* Red string connections - only appear after SUSPEITA */}
@@ -172,10 +249,10 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
               y1={`${noteCenters[0].y}%`}
               x2={`${noteCenters[2].x}%`}
               y2={`${noteCenters[2].y}%`}
-              stroke="oklch(0.55 0.22 25)"
+              stroke="#c41e3a"
               strokeWidth="2"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.7 }}
+              animate={{ pathLength: 1, opacity: 0.8 }}
               transition={{ duration: 0.8 }}
             />
           )}
@@ -190,10 +267,10 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
               y1={`${noteCenters[1].y}%`}
               x2={`${noteCenters[2].x}%`}
               y2={`${noteCenters[2].y}%`}
-              stroke="oklch(0.55 0.22 25)"
+              stroke="#c41e3a"
               strokeWidth="2"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.7 }}
+              animate={{ pathLength: 1, opacity: 0.8 }}
               transition={{ duration: 0.8 }}
             />
           )}
@@ -208,10 +285,10 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
               y1={`${noteCenters[2].y}%`}
               x2="50%"
               y2="88%"
-              stroke="oklch(0.55 0.22 25)"
+              stroke="#c41e3a"
               strokeWidth="2"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.7 }}
+              animate={{ pathLength: 1, opacity: 0.8 }}
               transition={{ duration: 0.8 }}
             />
           )}
@@ -296,19 +373,11 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
                       >
                         <span className="flex items-center gap-1.5">
                           {choice.hasImage && (
-                            <span className="relative w-5 h-5 md:w-6 md:h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 inline-flex items-center justify-center">
-                              <Image
-                                src={choice.imageSrc || ""}
-                                alt={choice.label}
-                                fill
-                                className="object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                              <span className="text-[10px] text-gray-500">cat</span>
-                            </span>
+                            <img
+                              src={choice.imageSrc || ""}
+                              alt=""
+                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                            />
                           )}
                           {choice.label}
                         </span>
@@ -394,7 +463,7 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
                   className="font-serif text-2xl md:text-3xl text-amber-900 font-bold tracking-wide"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
                 >
-                  A MEDICACAO
+                  A MEDICAÇÃO
                 </h2>
 
                 {/* CULPADA stamp */}

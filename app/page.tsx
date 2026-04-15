@@ -6,9 +6,8 @@ import { SleepingEyes, SleepingEyesRef } from "@/components/sleeping-eyes";
 import { EvidenceBoard } from "@/components/evidence-board";
 import { Typewriter } from "@/components/typewriter";
 import { PlaneAnimation } from "@/components/plane-animation";
-import { Confetti } from "@/components/confetti";
 import { Narrator } from "@/components/narrator";
-import { DecryptionReveal } from "@/components/decryption-reveal";
+import { MapReveal } from "@/components/map-reveal";
 import { Button } from "@/components/ui/button";
 
 type Screen = 
@@ -19,9 +18,7 @@ type Screen =
   | "investigation" 
   | "proverbio" 
   | "tease" 
-  | "reveal-question"
-  | "reveal-decrypting"
-  | "reveal-final";
+  | "reveal-map";
 
 export default function BirthdaySurprise() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("wake-act1");
@@ -32,8 +29,6 @@ export default function BirthdaySurprise() {
   const eyesRef2 = useRef<SleepingEyesRef>(null);
   const [showPlane, setShowPlane] = useState(false);
   const [showFinalButton, setShowFinalButton] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [revealStage, setRevealStage] = useState(0);
   const [showInvestigationButton, setShowInvestigationButton] = useState(false);
 
   // Wake-up Act 1 text sequence (triggered by SleepingEyes after 3 seconds)
