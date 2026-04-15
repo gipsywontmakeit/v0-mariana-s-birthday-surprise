@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SleepingEyes } from "@/components/sleeping-eyes";
+import { SleepingEyes, SleepingEyesRef } from "@/components/sleeping-eyes";
 import { EvidenceBoard } from "@/components/evidence-board";
 import { Typewriter } from "@/components/typewriter";
 import { PlaneAnimation } from "@/components/plane-animation";
-import { Confetti } from "@/components/confetti";
 import { Narrator } from "@/components/narrator";
-import { DecryptionReveal } from "@/components/decryption-reveal";
+import { MapReveal } from "@/components/map-reveal";
 import { Button } from "@/components/ui/button";
 
 type Screen = 
@@ -19,25 +18,23 @@ type Screen =
   | "investigation" 
   | "proverbio" 
   | "tease" 
-  | "reveal-question"
-  | "reveal-decrypting"
-  | "reveal-final";
+  | "reveal-map";
 
 export default function BirthdaySurprise() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("wake-act1");
   const [wakeTextStage, setWakeTextStage] = useState(0);
   const [showWakeButton, setShowWakeButton] = useState(false);
+  const [showWakeText, setShowWakeText] = useState(false);
+  const eyesRef = useRef<SleepingEyesRef>(null);
+  const eyesRef2 = useRef<SleepingEyesRef>(null);
   const [showPlane, setShowPlane] = useState(false);
   const [showFinalButton, setShowFinalButton] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [revealStage, setRevealStage] = useState(0);
   const [showInvestigationButton, setShowInvestigationButton] = useState(false);
 
-  // Wake-up Act 1 text sequence
-  useEffect(() => {
-    if (currentScreen !== "wake-act1") return;
-    
-    const timings = [1500, 3000, 4500, 5500];
+  // Wake-up Act 1 text sequence (triggered by SleepingEyes after 3 seconds)
+  const handleTextReadyAct1 = () => {
+    setShowWakeText(true);
+    const timings = [0, 1500, 3000, 4000];
     timings.forEach((time, index) => {
       setTimeout(() => {
         if (index < 3) {
@@ -47,16 +44,12 @@ export default function BirthdaySurprise() {
         }
       }, time);
     });
-  }, [currentScreen]);
+  };
 
-  // Wake-up Act 2 text sequence
-  useEffect(() => {
-    if (currentScreen !== "wake-act2") return;
-    
-    setWakeTextStage(0);
-    setShowWakeButton(false);
-    
-    const timings = [1000, 2500, 4000, 5000];
+  // Wake-up Act 2 text sequence (triggered by SleepingEyes after 3 seconds)
+  const handleTextReadyAct2 = () => {
+    setShowWakeText(true);
+    const timings = [0, 1500, 3000, 4000];
     timings.forEach((time, index) => {
       setTimeout(() => {
         if (index < 3) {
@@ -66,6 +59,15 @@ export default function BirthdaySurprise() {
         }
       }, time);
     });
+  };
+  
+  // Reset state when entering act 2
+  useEffect(() => {
+    if (currentScreen === "wake-act2") {
+      setWakeTextStage(0);
+      setShowWakeButton(false);
+      setShowWakeText(false);
+    }
   }, [currentScreen]);
 
   // Auto-advance from proverbio
@@ -83,21 +85,35 @@ export default function BirthdaySurprise() {
   useEffect(() => {
     if (currentScreen !== "reveal-final") return;
     
-    const timings = [800, 2000, 3200, 4500];
-    timings.forEach((time, index) => {
+    // Timings: 1=Malaga, 2=dates, 3=photo placeholder, 3.5=dog polaroid, 4=final message
+    const stages = [
+      { time: 800, stage: 1 },
+      { time: 2000, stage: 2 },
+      { time: 3200, stage: 3 },
+      { time: 4000, stage: 3.5 },
+      { time: 5200, stage: 4 },
+    ];
+    
+    stages.forEach(({ time, stage }) => {
       setTimeout(() => {
-        setRevealStage(index + 1);
-        if (index === 0) {
+        setRevealStage(stage);
+        if (stage === 1) {
           setShowConfetti(true);
         }
       }, time);
     });
   }, [currentScreen]);
 
-  const handleFirstWake = () => {
-    setCurrentScreen("fade-to-black");
+  const handleFirstWake = async () => {
+    // Eyes open slightly then slam shut
+    if (eyesRef.current) {
+      await eyesRef.current.openAndClose();
+    }
+    
     setWakeTextStage(0);
     setShowWakeButton(false);
+    setShowWakeText(false);
+    setCurrentScreen("fade-to-black");
     
     // Fade to black, then show "2 horas depois..."
     setTimeout(() => {
@@ -156,60 +172,69 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Narrator text="Era uma vez uma rapariga que dormia muito..." />
+            <SleepingEyes ref={eyesRef} onTextReady={handleTextReadyAct1} />
             
-            <SleepingEyes />
-            
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <div className="mt-32 space-y-4 text-center pointer-events-auto">
-                <AnimatePresence>
-                  {wakeTextStage >= 1 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-3xl md:text-5xl text-foreground/70"
-                    >
-                      Mariana.
-                    </motion.h2>
-                  )}
-                  {wakeTextStage >= 2 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-3xl md:text-5xl text-foreground/85"
-                    >
-                      Mariana.
-                    </motion.h2>
-                  )}
-                  {wakeTextStage >= 3 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-4xl md:text-6xl text-foreground font-bold"
-                    >
-                      MARIANA.
-                    </motion.h2>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              {showWakeButton && (
+            {/* Text appears BELOW the eyes after 3 seconds */}
+            <AnimatePresence>
+              {showWakeText && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="mt-12 pointer-events-auto"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 flex flex-col items-center justify-end pb-[20vh] pointer-events-none"
                 >
-                  <Button
-                    onClick={handleFirstWake}
-                    variant="outline"
-                    className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
-                  >
-                    Ok ok, já acordei
-                  </Button>
+                  <Narrator text="Era uma vez uma rapariga que dormia muito..." />
+                  
+                  <div className="space-y-4 text-center pointer-events-auto">
+                    <AnimatePresence>
+                      {wakeTextStage >= 1 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-3xl md:text-5xl text-foreground/70"
+                        >
+                          Mariana.
+                        </motion.h2>
+                      )}
+                      {wakeTextStage >= 2 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-3xl md:text-5xl text-foreground/85"
+                        >
+                          Mariana.
+                        </motion.h2>
+                      )}
+                      {wakeTextStage >= 3 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-4xl md:text-6xl text-foreground font-bold"
+                        >
+                          MARIANA.
+                        </motion.h2>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  
+                  {showWakeButton && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="mt-8 pointer-events-auto"
+                    >
+                      <Button
+                        onClick={handleFirstWake}
+                        variant="outline"
+                        className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
+                      >
+                        Ok ok, já acordei
+                      </Button>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </motion.section>
         )}
 
@@ -257,66 +282,75 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <SleepingEyes />
+            <SleepingEyes ref={eyesRef2} onTextReady={handleTextReadyAct2} />
             
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <div className="mt-32 space-y-4 text-center pointer-events-auto">
-                <AnimatePresence>
-                  {wakeTextStage >= 1 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-3xl md:text-5xl text-foreground/70"
-                    >
-                      Mariana.
-                    </motion.h2>
-                  )}
-                  {wakeTextStage >= 2 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-4xl md:text-6xl text-foreground font-bold"
-                    >
-                      MARIANA.
-                    </motion.h2>
-                  )}
-                  {wakeTextStage >= 3 && (
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-serif text-4xl md:text-6xl text-primary font-bold"
-                    >
-                      MARIANA, A SÉRIO.
-                    </motion.h2>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              {showWakeButton && (
+            {/* Text appears BELOW the eyes after 3 seconds */}
+            <AnimatePresence>
+              {showWakeText && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="mt-12 flex flex-col items-center gap-3 pointer-events-auto"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 flex flex-col items-center justify-end pb-[20vh] pointer-events-none"
                 >
-                  <Button
-                    onClick={handleSecondWake}
-                    variant="outline"
-                    className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
-                  >
-                    Ok, agora acordei mesmo
-                  </Button>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.5 }}
-                    transition={{ delay: 0.8 }}
-                    className="text-sm text-muted-foreground italic"
-                  >
-                    (desta vez a culpa não é da medicação)
-                  </motion.p>
+                  <div className="space-y-4 text-center pointer-events-auto">
+                    <AnimatePresence>
+                      {wakeTextStage >= 1 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-3xl md:text-5xl text-foreground/70"
+                        >
+                          Mariana.
+                        </motion.h2>
+                      )}
+                      {wakeTextStage >= 2 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-4xl md:text-6xl text-foreground font-bold"
+                        >
+                          MARIANA.
+                        </motion.h2>
+                      )}
+                      {wakeTextStage >= 3 && (
+                        <motion.h2
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-serif text-4xl md:text-6xl text-primary font-bold"
+                        >
+                          MARIANA, A SÉRIO.
+                        </motion.h2>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  
+                  {showWakeButton && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="mt-8 flex flex-col items-center gap-3 pointer-events-auto"
+                    >
+                      <Button
+                        onClick={handleSecondWake}
+                        variant="outline"
+                        className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
+                      >
+                        Ok, agora acordei mesmo
+                      </Button>
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.5 }}
+                        transition={{ delay: 0.8 }}
+                        className="text-sm text-muted-foreground italic"
+                      >
+                        (desta vez a culpa não é da medicação)
+                      </motion.p>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </motion.section>
         )}
 
@@ -324,25 +358,26 @@ export default function BirthdaySurprise() {
         {currentScreen === "investigation" && (
           <motion.section
             key="investigation"
-            className="fixed inset-0 flex flex-col items-center justify-center px-6 py-16 overflow-y-auto"
+            className="fixed inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Narrator text="As evidências eram irrefutáveis." />
+            {/* Full-screen evidence board */}
+            <EvidenceBoard onAllRevealed={handleInvestigationComplete} />
             
+            {/* Title overlay */}
             <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="font-serif text-2xl md:text-4xl text-foreground mb-8 text-center mt-8"
+              transition={{ delay: 0.3 }}
+              className="absolute top-6 left-0 right-0 font-serif text-xl md:text-3xl text-foreground/90 text-center z-30 px-4"
             >
               Passámos a noite a investigar.
             </motion.h2>
             
-            <EvidenceBoard onAllRevealed={handleInvestigationComplete} />
-            
+            {/* Continue button */}
             <AnimatePresence>
               {showInvestigationButton && (
                 <motion.div
@@ -350,12 +385,12 @@ export default function BirthdaySurprise() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-8"
+                  className="absolute bottom-8 left-0 right-0 flex justify-center z-30"
                 >
                   <Button
                     onClick={handleInvestigationContinue}
                     variant="outline"
-                    className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
+                    className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg bg-background/80 backdrop-blur-sm"
                   >
                     Ok, e então?
                   </Button>
@@ -589,6 +624,55 @@ export default function BirthdaySurprise() {
                           adiciona foto aqui
                         </p>
                       </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Dog polaroid - Potato stays home */}
+              {revealStage >= 3.5 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 100, x: 50, rotate: 8 }}
+                  animate={{ opacity: 1, y: 0, x: 0, rotate: 3 }}
+                  transition={{ type: "spring", damping: 15 }}
+                  className="absolute bottom-8 right-4 md:right-12 z-20"
+                >
+                  {/* Polaroid frame */}
+                  <div
+                    className="bg-white p-2 pb-10 shadow-xl"
+                    style={{ 
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
+                      width: "140px",
+                    }}
+                  >
+                    {/* Photo area */}
+                    <div className="relative w-full aspect-square bg-gray-200 overflow-hidden">
+                      <img
+                        src="/cadela.jpg"
+                        alt="Potato the dog"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                      {/* Fallback placeholder */}
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
+                        dog photo
+                      </div>
+                    </div>
+                    
+                    {/* Handwritten caption */}
+                    <div className="absolute bottom-2 left-0 right-0 text-center px-2">
+                      <p 
+                        className="text-[10px] text-gray-600 italic leading-tight"
+                        style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                      >
+                        ela fica a guardar a casa. com inveja...
+                      </p>
+                      <p className="text-[8px] text-gray-500 mt-0.5">
+                        (ja tem o look de Malaga)
+                      </p>
                     </div>
                   </div>
                 </motion.div>
