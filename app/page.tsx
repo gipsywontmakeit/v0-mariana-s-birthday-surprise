@@ -90,11 +90,19 @@ export default function BirthdaySurprise() {
   useEffect(() => {
     if (currentScreen !== "reveal-final") return;
     
-    const timings = [800, 2000, 3200, 4500];
-    timings.forEach((time, index) => {
+    // Timings: 1=Malaga, 2=dates, 3=photo placeholder, 3.5=dog polaroid, 4=final message
+    const stages = [
+      { time: 800, stage: 1 },
+      { time: 2000, stage: 2 },
+      { time: 3200, stage: 3 },
+      { time: 4000, stage: 3.5 },
+      { time: 5200, stage: 4 },
+    ];
+    
+    stages.forEach(({ time, stage }) => {
       setTimeout(() => {
-        setRevealStage(index + 1);
-        if (index === 0) {
+        setRevealStage(stage);
+        if (stage === 1) {
           setShowConfetti(true);
         }
       }, time);
@@ -621,6 +629,55 @@ export default function BirthdaySurprise() {
                           adiciona foto aqui
                         </p>
                       </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Dog polaroid - Potato stays home */}
+              {revealStage >= 3.5 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 100, x: 50, rotate: 8 }}
+                  animate={{ opacity: 1, y: 0, x: 0, rotate: 3 }}
+                  transition={{ type: "spring", damping: 15 }}
+                  className="absolute bottom-8 right-4 md:right-12 z-20"
+                >
+                  {/* Polaroid frame */}
+                  <div
+                    className="bg-white p-2 pb-10 shadow-xl"
+                    style={{ 
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
+                      width: "140px",
+                    }}
+                  >
+                    {/* Photo area */}
+                    <div className="relative w-full aspect-square bg-gray-200 overflow-hidden">
+                      <img
+                        src="/cadela.jpg"
+                        alt="Potato the dog"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                      {/* Fallback placeholder */}
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
+                        dog photo
+                      </div>
+                    </div>
+                    
+                    {/* Handwritten caption */}
+                    <div className="absolute bottom-2 left-0 right-0 text-center px-2">
+                      <p 
+                        className="text-[10px] text-gray-600 italic leading-tight"
+                        style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                      >
+                        ela fica a guardar a casa. com inveja...
+                      </p>
+                      <p className="text-[8px] text-gray-500 mt-0.5">
+                        (ja tem o look de Malaga)
+                      </p>
                     </div>
                   </div>
                 </motion.div>

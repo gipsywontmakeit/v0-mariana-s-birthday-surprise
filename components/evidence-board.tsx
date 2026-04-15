@@ -2,41 +2,80 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
-const evidenceNotes = [
+interface Crime {
+  id: number;
+  title: string;
+  choices: {
+    label: string;
+    isSuspeita: boolean;
+    confession?: string;
+    hasImage?: boolean;
+    imageSrc?: string;
+  }[];
+  position: { top: string; left?: string; right?: string };
+  rotate: number;
+}
+
+const crimes: Crime[] = [
   {
-    text: "Ressona à noite — culpa: a medicação",
-    position: { top: "12%", left: "8%" },
+    id: 1,
+    title: "Ressona à noite... e parece um tractor",
+    choices: [
+      { label: "Constipação", isSuspeita: false, confession: "a constipação confessa: foi cúmplice." },
+      { label: "Medicação", isSuspeita: true },
+    ],
+    position: { top: "15%", left: "8%" },
     rotate: -4,
   },
   {
-    text: "Arrotos suspeitos — culpa: a medicação",
-    position: { top: "10%", right: "10%" },
+    id: 2,
+    title: "Arrotos a cheirar a ovo estrelado",
+    choices: [
+      { label: "Proteína a mais", isSuspeita: false, confession: "a proteína admite: foi cúmplice." },
+      { label: "Medicação", isSuspeita: true },
+    ],
+    position: { top: "12%", right: "8%" },
     rotate: 3,
   },
   {
-    text: "Dorme até ao meio-dia — culpa: a medicação",
-    position: { top: "45%", left: "50%", transform: "translateX(-50%)" },
+    id: 3,
+    title: "Dorme 2.132.171.241 horas seguidas",
+    choices: [
+      { label: "Soninho inocente", isSuspeita: false, confession: "o soninho era... só soninho." },
+      { label: "Cama confortável", isSuspeita: false, confession: "a cama nega tudo." },
+      { label: "Sofá confortável", isSuspeita: false, confession: "o sofá também nega." },
+      { label: "Tudo o que dê para encostar", isSuspeita: false, confession: "fair point." },
+      { label: "Minino sibi", isSuspeita: false, confession: "o minino era inocente. provavelmente.", hasImage: true, imageSrc: "/sibi.jpg" },
+      { label: "Medicação", isSuspeita: true },
+    ],
+    position: { top: "52%", left: "50%" },
     rotate: -1,
   },
 ];
 
-// SVG line connections between notes (from index to index)
-const stringConnections = [
-  { from: 0, to: 2 },
-  { from: 1, to: 2 },
+// Note centers for string drawing (percentages)
+const noteCenters = [
+  { x: 18, y: 28 },  // Card 1
+  { x: 82, y: 25 },  // Card 2  
+  { x: 50, y: 65 },  // Card 3
 ];
+
+interface CardState {
+  selectedChoice: string | null;
+  isSuspeita: boolean;
+  confession: string | null;
+}
 
 interface EvidenceBoardProps {
   onAllRevealed?: () => void;
 }
 
 export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
-  const [revealedCards, setRevealedCards] = useState<number[]>([]);
-  const [showStrings, setShowStrings] = useState(false);
+  const [cardStates, setCardStates] = useState<Record<number, CardState>>({});
   const [showConclusion, setShowConclusion] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-  const [dimmed, setDimmed] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -47,38 +86,36 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  const handleCardClick = (index: number) => {
-    if (revealedCards.includes(index)) return;
+  const suspeitaCount = Object.values(cardStates).filter(s => s.isSuspeita).length;
+  const allSuspeita = suspeitaCount === 3;
 
-    // Spotlight effect
-    setDimmed(true);
-    setTimeout(() => setDimmed(false), 300);
-
-    const newRevealed = [...revealedCards, index];
-    setRevealedCards(newRevealed);
-
-    // After all cards revealed, show strings then conclusion
-    if (newRevealed.length === evidenceNotes.length) {
+  // Show conclusion after all 3 marked suspeita
+  useEffect(() => {
+    if (allSuspeita && !showConclusion) {
       setTimeout(() => {
-        setShowStrings(true);
+        setShowConclusion(true);
         setTimeout(() => {
-          setShowConclusion(true);
-          setTimeout(() => {
-            onAllRevealed?.();
-          }, 1500);
-        }, 1200);
-      }, 600);
+          onAllRevealed?.();
+        }, 2000);
+      }, 1500);
     }
+  }, [allSuspeita, showConclusion, onAllRevealed]);
+
+  const handleChoice = (crimeId: number, choice: Crime["choices"][0]) => {
+    if (cardStates[crimeId]?.isSuspeita) return; // Already marked suspeita, no more changes
+
+    setCardStates(prev => ({
+      ...prev,
+      [crimeId]: {
+        selectedChoice: choice.label,
+        isSuspeita: choice.isSuspeita,
+        confession: choice.isSuspeita ? null : choice.confession || null,
+      },
+    }));
   };
 
-  // Calculate note positions for string drawing
-  const getNoteCenter = (index: number) => {
-    const note = evidenceNotes[index];
-    // Approximate centers based on position
-    if (index === 0) return { x: 15, y: 20 };
-    if (index === 1) return { x: 85, y: 18 };
-    return { x: 50, y: 55 };
-  };
+  // Check if a card has suspeita selected
+  const cardHasSuspeita = (id: number) => cardStates[id]?.isSuspeita === true;
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -112,16 +149,9 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
         }}
       />
 
-      {/* Spotlight dim effect */}
-      <motion.div
-        className="absolute inset-0 bg-background/50 pointer-events-none z-10"
-        animate={{ opacity: dimmed ? 0.5 : 0 }}
-        transition={{ duration: 0.15 }}
-      />
-
       {/* Subtle magnifying glass cursor follower */}
       <motion.div
-        className="fixed w-6 h-6 pointer-events-none z-30 opacity-30"
+        className="fixed w-6 h-6 pointer-events-none z-30 opacity-30 hidden md:block"
         animate={{ x: mousePos.x - 12, y: mousePos.y - 12 }}
         transition={{ type: "spring", damping: 30, stiffness: 400 }}
       >
@@ -131,84 +161,99 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
         </svg>
       </motion.div>
 
-      {/* Red string connections */}
+      {/* Red string connections - only appear after SUSPEITA */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+        {/* String from card 1 to card 3 */}
         <AnimatePresence>
-          {showStrings &&
-            stringConnections.map((conn, i) => {
-              const from = getNoteCenter(conn.from);
-              const to = getNoteCenter(conn.to);
-              return (
-                <motion.line
-                  key={`string-${i}`}
-                  x1={`${from.x}%`}
-                  y1={`${from.y}%`}
-                  x2={`${to.x}%`}
-                  y2={`${to.y}%`}
-                  stroke="oklch(0.55 0.22 25)"
-                  strokeWidth="1.5"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.6 }}
-                  transition={{ duration: 0.8, delay: i * 0.3 }}
-                />
-              );
-            })}
-          {showConclusion && (
+          {cardHasSuspeita(1) && (
             <motion.line
-              x1="50%"
-              y1="55%"
-              x2="50%"
-              y2="78%"
+              key="string-1-3"
+              x1={`${noteCenters[0].x}%`}
+              y1={`${noteCenters[0].y}%`}
+              x2={`${noteCenters[2].x}%`}
+              y2={`${noteCenters[2].y}%`}
               stroke="oklch(0.55 0.22 25)"
-              strokeWidth="1.5"
+              strokeWidth="2"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.6 }}
-              transition={{ duration: 0.5 }}
+              animate={{ pathLength: 1, opacity: 0.7 }}
+              transition={{ duration: 0.8 }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* String from card 2 to card 3 */}
+        <AnimatePresence>
+          {cardHasSuspeita(2) && (
+            <motion.line
+              key="string-2-3"
+              x1={`${noteCenters[1].x}%`}
+              y1={`${noteCenters[1].y}%`}
+              x2={`${noteCenters[2].x}%`}
+              y2={`${noteCenters[2].y}%`}
+              stroke="oklch(0.55 0.22 25)"
+              strokeWidth="2"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.7 }}
+              transition={{ duration: 0.8 }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* String from card 3 to conclusion */}
+        <AnimatePresence>
+          {cardHasSuspeita(3) && (
+            <motion.line
+              key="string-3-conclusion"
+              x1={`${noteCenters[2].x}%`}
+              y1={`${noteCenters[2].y}%`}
+              x2="50%"
+              y2="88%"
+              stroke="oklch(0.55 0.22 25)"
+              strokeWidth="2"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.7 }}
+              transition={{ duration: 0.8 }}
             />
           )}
         </AnimatePresence>
       </svg>
 
-      {/* Evidence notes */}
-      {evidenceNotes.map((note, index) => {
-        const isRevealed = revealedCards.includes(index);
-        const isHovered = hoveredCard === index;
+      {/* Crime cards */}
+      {crimes.map((crime, index) => {
+        const state = cardStates[crime.id];
+        const isHovered = hoveredCard === crime.id;
+        const isThirdCard = crime.id === 3;
 
         return (
           <motion.div
-            key={index}
-            className="absolute z-10 cursor-pointer"
+            key={crime.id}
+            className="absolute z-10"
             style={{
-              ...note.position,
-              transform: note.position.transform || undefined,
+              ...crime.position,
+              ...(isThirdCard ? { transform: "translateX(-50%)" } : {}),
             }}
             initial={{ opacity: 0, scale: 0 }}
             animate={{
               opacity: 1,
-              scale: isHovered && !isRevealed ? 1.05 : 1,
-              rotate: isHovered && !isRevealed ? note.rotate + (Math.random() - 0.5) * 3 : note.rotate,
+              scale: isHovered && !state?.isSuspeita ? 1.03 : 1,
+              rotate: crime.rotate,
             }}
             transition={{
               opacity: { delay: 0.5 + index * 0.2, duration: 0.5 },
               scale: { delay: 0.5 + index * 0.2, duration: 0.5 },
-              rotate: { type: "spring", stiffness: 300 },
             }}
-            whileTap={!isRevealed ? { scale: 1.15 } : undefined}
-            onHoverStart={() => !isRevealed && setHoveredCard(index)}
+            onHoverStart={() => setHoveredCard(crime.id)}
             onHoverEnd={() => setHoveredCard(null)}
-            onClick={() => handleCardClick(index)}
           >
             {/* Pin */}
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-lg z-20 border border-red-800" />
 
             {/* Paper note */}
             <div
-              className="relative w-[200px] md:w-[260px] overflow-hidden"
+              className={`relative overflow-hidden ${isThirdCard ? "w-[280px] md:w-[340px]" : "w-[220px] md:w-[280px]"}`}
               style={{
                 background: "linear-gradient(135deg, #fef9ef 0%, #f5eed6 100%)",
-                boxShadow: isRevealed
-                  ? "0 8px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5)"
-                  : "0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)",
+                boxShadow: "0 6px 25px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5)",
               }}
             >
               {/* Paper texture */}
@@ -220,91 +265,147 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
               />
 
               <div className="relative p-4 md:p-5">
-                {/* Hidden text (always rendered for layout) */}
-                <p
-                  className={`font-serif text-sm md:text-base leading-relaxed transition-all duration-500 ${
-                    isRevealed ? "text-amber-900" : "text-transparent"
-                  }`}
+                {/* Crime title */}
+                <h3
+                  className="font-serif text-sm md:text-base text-amber-900 font-medium mb-4 leading-tight"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
                 >
-                  {note.text}
-                </p>
+                  {crime.title}
+                </h3>
 
-                {/* Redaction bar overlay */}
+                {/* Choice buttons */}
+                <div className={`flex flex-wrap gap-2 ${isThirdCard ? "grid grid-cols-2" : ""}`}>
+                  {crime.choices.map((choice) => {
+                    const isSelected = state?.selectedChoice === choice.label;
+                    const isDisabled = state?.isSuspeita && !isSelected;
+                    const showAsCumplice = isSelected && !choice.isSuspeita;
+                    const showAsSuspeita = isSelected && choice.isSuspeita;
+
+                    return (
+                      <button
+                        key={choice.label}
+                        onClick={() => handleChoice(crime.id, choice)}
+                        disabled={isDisabled || showAsSuspeita}
+                        className={`
+                          relative px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all
+                          ${isDisabled ? "opacity-40 cursor-not-allowed" : "hover:scale-105 cursor-pointer"}
+                          ${showAsCumplice ? "bg-red-100 text-red-800 border border-red-300" : ""}
+                          ${showAsSuspeita ? "bg-amber-100 text-amber-800 border border-amber-400" : ""}
+                          ${!isSelected ? "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100" : ""}
+                        `}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {choice.hasImage && (
+                            <span className="relative w-5 h-5 md:w-6 md:h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 inline-flex items-center justify-center">
+                              <Image
+                                src={choice.imageSrc || ""}
+                                alt={choice.label}
+                                fill
+                                className="object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              <span className="text-[10px] text-gray-500">cat</span>
+                            </span>
+                          )}
+                          {choice.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Confession note for CÚMPLICE */}
                 <AnimatePresence>
-                  {!isRevealed && (
-                    <motion.div
-                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4"
-                      initial={{ x: 0 }}
-                      exit={{ x: "120%", rotate: 5 }}
-                      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                  {state?.confession && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-3 text-xs text-red-700 italic"
                     >
-                      <div className="w-full h-4 bg-foreground/90 rounded-sm" />
-                      <div className="w-3/4 h-4 bg-foreground/90 rounded-sm" />
-                    </motion.div>
+                      {state.confession}
+                    </motion.p>
                   )}
                 </AnimatePresence>
 
-                {/* Click hint */}
-                {index === 0 && revealedCards.length === 0 && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.4, 0.8, 0.4] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute -bottom-8 left-0 right-0 text-center text-xs text-foreground/60 italic"
-                  >
-                    clique para revelar
-                  </motion.p>
-                )}
+                {/* Stamp overlays */}
+                <AnimatePresence>
+                  {state?.isSuspeita === false && state?.selectedChoice && (
+                    <motion.div
+                      className="absolute top-3 right-3 pointer-events-none"
+                      initial={{ opacity: 0, scale: 1.5, rotate: -20 }}
+                      animate={{ opacity: 1, scale: 1, rotate: -12 }}
+                      transition={{ type: "spring", damping: 12 }}
+                    >
+                      <span className="text-red-600 font-serif italic text-xs md:text-sm font-bold border border-red-400 px-2 py-0.5 rounded bg-red-50/80">
+                        CUMPLICE
+                      </span>
+                    </motion.div>
+                  )}
+                  {state?.isSuspeita === true && (
+                    <motion.div
+                      className="absolute top-3 right-3 pointer-events-none"
+                      initial={{ opacity: 0, scale: 1.5, rotate: -20 }}
+                      animate={{ opacity: 1, scale: 1, rotate: -12 }}
+                      transition={{ type: "spring", damping: 12 }}
+                    >
+                      <span className="text-amber-700 font-serif italic text-xs md:text-sm font-bold border border-amber-500 px-2 py-0.5 rounded bg-amber-50/80">
+                        SUSPEITA
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
         );
       })}
 
-      {/* Conclusion note - flies in from off-screen */}
+      {/* Conclusion dossier - flies in after all suspeita */}
       <AnimatePresence>
         {showConclusion && (
           <motion.div
-            className="absolute z-20"
-            style={{ top: "72%", left: "50%", transform: "translateX(-50%)" }}
-            initial={{ opacity: 0, y: 300, x: "-50%", scale: 0.5, rotate: -20 }}
+            className="absolute z-20 left-1/2"
+            style={{ top: "82%", transform: "translateX(-50%)" }}
+            initial={{ opacity: 0, y: -200, x: "-50%", scale: 0.5, rotate: 15 }}
             animate={{ opacity: 1, y: 0, x: "-50%", scale: 1, rotate: 2 }}
             transition={{
               type: "spring",
-              damping: 15,
-              stiffness: 100,
+              damping: 12,
+              stiffness: 80,
               duration: 0.8,
             }}
           >
             {/* Pin */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-lg z-20 border border-red-800" />
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-red-600 shadow-lg z-20 border-2 border-red-800" />
 
-            {/* Paper note */}
+            {/* Dossier note */}
             <div
-              className="relative w-[280px] md:w-[340px] overflow-hidden"
+              className="relative w-[260px] md:w-[320px] overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, #fffef5 0%, #f8f4e3 100%)",
                 boxShadow: "0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6)",
               }}
             >
-              <div className="relative p-5 md:p-6">
-                <p
-                  className="font-serif text-base md:text-lg leading-relaxed text-amber-900 font-medium"
+              <div className="relative p-6 md:p-8 text-center">
+                <h2
+                  className="font-serif text-2xl md:text-3xl text-amber-900 font-bold tracking-wide"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
                 >
-                  Conclusão: a medicação tem muita culpa.
-                </p>
+                  A MEDICACAO
+                </h2>
 
                 {/* CULPADA stamp */}
                 <motion.div
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                  initial={{ opacity: 0, scale: 2, rotate: -15 }}
-                  animate={{ opacity: 1, scale: 1, rotate: -12 }}
-                  transition={{ delay: 0.5, duration: 0.3, type: "spring", damping: 10 }}
+                  initial={{ opacity: 0, scale: 2.5, rotate: -15 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -15 }}
+                  transition={{ delay: 0.4, duration: 0.25, type: "spring", damping: 8, stiffness: 200 }}
                 >
                   <div
-                    className="px-4 py-2 border-4 border-red-600 text-red-600 font-bold text-2xl md:text-3xl tracking-wider uppercase"
+                    className="px-5 py-2 border-[3px] border-red-600 text-red-600 font-bold text-3xl md:text-4xl tracking-widest uppercase bg-white/30"
                     style={{
                       fontFamily: "'Impact', 'Arial Black', sans-serif",
                       textShadow: "1px 1px 0 rgba(0,0,0,0.1)",
@@ -313,6 +414,15 @@ export function EvidenceBoard({ onAllRevealed }: EvidenceBoardProps) {
                     CULPADA
                   </div>
                 </motion.div>
+
+                <motion.p
+                  className="mt-10 text-sm text-amber-700 italic"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  caso encerrado.
+                </motion.p>
               </div>
             </div>
           </motion.div>
