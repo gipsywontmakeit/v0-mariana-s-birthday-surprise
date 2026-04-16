@@ -56,7 +56,7 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
 
     // Handle wakeStage changes for Z animation
     useEffect(() => {
-      if (wakeStage >= 3) {
+      if (wakeStage >= 1) {
         setZsFrozen(true);
         // Fade out after freezing
         setTimeout(() => {
@@ -236,7 +236,7 @@ export const SleepingEyes = forwardRef<SleepingEyesRef, SleepingEyesProps>(
                     ease: "easeOut",
                   }}
                 >
-                  Z
+                  Zzz
                 </motion.span>
               ))}
             </motion.div>
