@@ -1,438 +1,721 @@
 "use client";
 
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { Confetti } from "@/components/confetti";
-
-// Simple hand-drawn style Europe map paths
-const europePaths = {
-  // Portugal - highlighted
-  portugal: "M 95 145 L 90 150 L 88 165 L 92 180 L 98 185 L 102 175 L 100 160 L 95 145",
-  // Spain
-  spain: "M 98 185 L 102 175 L 100 160 L 95 145 L 115 140 L 145 145 L 165 155 L 175 170 L 165 185 L 140 195 L 110 195 L 98 185",
-  // France  
-  france: "M 165 155 L 175 130 L 200 115 L 230 120 L 240 145 L 235 165 L 210 175 L 175 170 L 165 155",
-  // Italy
-  italy: "M 240 145 L 260 155 L 275 185 L 265 210 L 250 220 L 260 195 L 255 175 L 245 160 L 240 145",
-  // UK
-  uk: "M 155 95 L 165 85 L 175 90 L 180 105 L 170 120 L 160 115 L 155 100 L 155 95",
-  // Germany area
-  germany: "M 230 120 L 250 110 L 270 115 L 275 135 L 260 150 L 240 145 L 230 120",
-  // Mediterranean coastline hint
-  coast: "M 165 185 L 190 190 L 220 195 L 245 200 L 260 195",
-};
-
-// Málaga position on the map (southern Spain coast)
-const malagaPosition = { x: 135, y: 188 };
-// Portugal start position
-const portugalPosition = { x: 92, y: 165 };
 
 interface MapRevealProps {
   onComplete?: () => void;
 }
 
-export function MapReveal({ onComplete }: MapRevealProps) {
-  const [stage, setStage] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [planeProgress, setPlaneProgress] = useState(0);
-  const [showStars, setShowStars] = useState(false);
-  const [typedDates, setTypedDates] = useState("");
-  const [typedMessage, setTypedMessage] = useState("");
+type Phase = "cards" | "boarding-pass" | "final";
 
-  // Progress motion value for the plane
-  const progress = useMotionValue(0);
-  
-  // Interpolate plane position along path
-  const planeX = useTransform(progress, [0, 1], [portugalPosition.x, malagaPosition.x]);
-  const planeY = useTransform(progress, [0, 1], [portugalPosition.y - 20, malagaPosition.y - 15]);
+function TypeLine({
+  text,
+  start,
+  speed = 90,
+  onDone,
+  className = "",
+  cursorColorClass = "text-pink-300",
+}: {
+  text: string;
+  start: boolean;
+  speed?: number;
+  onDone?: () => void;
+  className?: string;
+  cursorColorClass?: string;
+}) {
+  const [shown, setShown] = useState("");
 
-  // Stage progression
   useEffect(() => {
-    // Stage 0: Initial, Stage 1: Map visible
-    const timer1 = setTimeout(() => setStage(1), 500);
-    
-    // Stage 2: Plane starts
-    const timer2 = setTimeout(() => setStage(2), 2000);
-    
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, []);
+    if (!start) return;
 
-  // Plane animation
-  useEffect(() => {
-    if (stage === 2) {
-      animate(progress, 1, {
-        duration: 2.5,
-        ease: "easeInOut",
-        onUpdate: (v) => setPlaneProgress(v),
-        onComplete: () => {
-          setShowStars(true);
-          setTimeout(() => setStage(3), 800);
-        },
-      });
-    }
-  }, [stage, progress]);
+    setShown("");
+    let i = 0;
 
-  // Type dates
-  useEffect(() => {
-    if (stage >= 3) {
-      const dates = "19 a 22 de Setembro";
-      let i = 0;
-      const dateTimer = setInterval(() => {
-        if (i <= dates.length) {
-          setTypedDates(dates.slice(0, i));
-          i++;
-        } else {
-          clearInterval(dateTimer);
-          setTimeout(() => setStage(4), 500);
-        }
-      }, 80);
-      return () => clearInterval(dateTimer);
-    }
-  }, [stage]);
+    const timer = setInterval(() => {
+      if (i <= text.length) {
+        setShown(text.slice(0, i));
+        i++;
+      } else {
+        clearInterval(timer);
+        onDone?.();
+      }
+    }, speed);
 
-  // Type final message
-  useEffect(() => {
-    if (stage >= 5) {
-      const message = "Feliz aniversário, Mariana. Agora vai fazer a mala.";
-      let i = 0;
-      const msgTimer = setInterval(() => {
-        if (i <= message.length) {
-          setTypedMessage(message.slice(0, i));
-          i++;
-        } else {
-          clearInterval(msgTimer);
-          setTimeout(() => onComplete?.(), 1500);
-        }
-      }, 50);
-      return () => clearInterval(msgTimer);
-    }
-  }, [stage, onComplete]);
-
-  // Show photos, then dog, then message
-  useEffect(() => {
-    if (stage === 4) {
-      setTimeout(() => setStage(4.5), 1500); // Dog slides in
-      setTimeout(() => {
-        setShowConfetti(true);
-        setStage(5); // Message types
-      }, 3000);
-    }
-  }, [stage]);
+    return () => clearInterval(timer);
+  }, [start, text, speed, onDone]);
 
   return (
-    <div className="fixed inset-0 bg-background overflow-hidden">
-      {showConfetti && <Confetti />}
-      
-      {/* Map container */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: stage >= 1 ? 1 : 0 }}
-        transition={{ duration: 1 }}
-      >
-        {stage < 3 && (
-          <svg
-            viewBox="0 0 350 280"
-            className="w-full max-w-2xl h-auto px-8"
-            style={{ filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.3))" }}
-          >
-            {/* Background water hint */}
-            <rect x="0" y="0" width="350" height="280" fill="oklch(0.15 0.02 250)" rx="8" />
-            
-            {/* Country outlines - hand drawn style */}
-            <motion.path
-              d={europePaths.uk}
-              fill="none"
-              stroke="oklch(0.4 0.02 250)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.2 }}
-            />
-            <motion.path
-              d={europePaths.france}
-              fill="none"
-              stroke="oklch(0.4 0.02 250)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-            />
-            <motion.path
-              d={europePaths.germany}
-              fill="none"
-              stroke="oklch(0.4 0.02 250)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.4 }}
-            />
-            <motion.path
-              d={europePaths.italy}
-              fill="none"
-              stroke="oklch(0.4 0.02 250)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.5 }}
-            />
-            <motion.path
-              d={europePaths.spain}
-              fill="none"
-              stroke="oklch(0.4 0.02 250)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.1 }}
-            />
-            {/* Portugal - highlighted in amber */}
-            <motion.path
-              d={europePaths.portugal}
-              fill="oklch(0.65 0.15 65 / 0.4)"
-              stroke="oklch(0.75 0.12 65)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0, fillOpacity: 0 }}
-              animate={{ pathLength: 1, fillOpacity: 0.4 }}
-              transition={{ duration: 1.2 }}
-            />
-            <motion.path
-              d={europePaths.coast}
-              fill="none"
-              stroke="oklch(0.35 0.02 250)"
-              strokeWidth="1"
-              strokeDasharray="4 4"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 0.6 }}
-            />
+    <p className={className}>
+      {shown}
+      {start && shown.length < text.length && (
+        <span className={`inline-block ml-1 animate-pulse ${cursorColorClass}`}>|</span>
+      )}
+    </p>
+  );
+}
 
-            {/* Málaga pin */}
-            <motion.g
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.8, type: "spring", damping: 10 }}
-            >
-              {/* Pin shadow */}
-              <ellipse cx={malagaPosition.x} cy={malagaPosition.y + 3} rx="4" ry="2" fill="rgba(0,0,0,0.3)" />
-              {/* Pin */}
-              <path
-                d={`M ${malagaPosition.x} ${malagaPosition.y - 15} 
-                   c -8 0 -12 6 -12 12 
-                   c 0 8 12 18 12 18 
-                   c 0 0 12 -10 12 -18 
-                   c 0 -6 -4 -12 -12 -12 z`}
-                fill="#c41e3a"
-                stroke="#8b1425"
-                strokeWidth="1"
-              />
-              <circle cx={malagaPosition.x} cy={malagaPosition.y - 10} r="4" fill="white" opacity="0.8" />
-            </motion.g>
+function FloatingMorangos() {
+  const items = useMemo(() => {
+    const generated: {
+      id: number;
+      left: string;
+      top: string;
+      size: number;
+      duration: number;
+      delay: number;
+      rotate: number;
+    }[] = [];
 
-            {/* Flight path - dotted trail */}
-            {stage >= 2 && (
-              <motion.path
-                d={`M ${portugalPosition.x} ${portugalPosition.y - 20} Q ${(portugalPosition.x + malagaPosition.x) / 2} ${portugalPosition.y - 60} ${malagaPosition.x} ${malagaPosition.y - 15}`}
-                fill="none"
-                stroke="oklch(0.75 0.12 65)"
-                strokeWidth="2"
-                strokeDasharray="6 6"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: planeProgress }}
-              />
-            )}
+    const isInsideSafeZone = (x: number, y: number) => {
+      return x > 14 && x < 86 && y > 14 && y < 86;
+    };
 
-            {/* Paper plane */}
-            {stage >= 2 && (
-              <motion.g style={{ x: planeX, y: planeY }}>
-                <motion.g
-                  animate={{ rotate: stage >= 2 ? [0, -5, 5, 0] : 0 }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                >
-                  {/* Simple paper plane */}
-                  <path
-                    d="M -8 0 L 8 0 L 0 -12 Z"
-                    fill="white"
-                    stroke="oklch(0.5 0.02 250)"
-                    strokeWidth="0.5"
-                    transform="rotate(45)"
-                  />
-                  <path
-                    d="M 0 -2 L 0 6"
-                    stroke="oklch(0.5 0.02 250)"
-                    strokeWidth="0.5"
-                    transform="rotate(45)"
-                  />
-                </motion.g>
-              </motion.g>
-            )}
+    let attempts = 0;
+    while (generated.length < 280 && attempts < 20000) {
+      const x = Math.random() * 100;
+      const y = Math.random() * 100;
 
-            {/* Star explosion at Málaga */}
-            {showStars && (
-              <>
-                {[...Array(8)].map((_, i) => (
-                  <motion.text
-                    key={i}
-                    x={malagaPosition.x}
-                    y={malagaPosition.y - 10}
-                    fontSize="12"
-                    fill="oklch(0.75 0.12 65)"
-                    initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-                    animate={{
-                      scale: [0, 1, 0.5],
-                      x: Math.cos((i * Math.PI * 2) / 8) * 25,
-                      y: Math.sin((i * Math.PI * 2) / 8) * 25,
-                      opacity: [1, 1, 0],
-                    }}
-                    transition={{ duration: 0.8 }}
-                  >
-                    ✦
-                  </motion.text>
-                ))}
-              </>
-            )}
-          </svg>
-        )}
-      </motion.div>
+      if (!isInsideSafeZone(x, y)) {
+        generated.push({
+          id: generated.length,
+          left: `${x}%`,
+          top: `${y}%`,
+          size: 14 + Math.random() * 38,
+          duration: 3.2 + Math.random() * 3.6,
+          delay: Math.random() * 2.8,
+          rotate: (Math.random() > 0.5 ? 1 : -1) * (6 + Math.random() * 22),
+        });
+      }
 
-      {/* MÁLAGA reveal - Stage 3+ */}
-      {stage >= 3 && (
+      attempts++;
+    }
+
+    return generated;
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+      {items.map((item) => (
+        <motion.img
+          key={item.id}
+          src="/morango.png"
+          alt=""
+          className="absolute select-none opacity-95"
+          style={{
+            left: item.left,
+            top: item.top,
+            width: `${item.size}px`,
+            height: "auto",
+          }}
+          initial={{ opacity: 0, scale: 0.35, y: 8, rotate: 0 }}
+          animate={{
+            opacity: 0.95,
+            scale: 1,
+            y: [0, -8, 0],
+            x: [0, 4, -3, 0],
+            rotate: [0, item.rotate, -item.rotate * 0.55, 0],
+          }}
+          transition={{
+            opacity: { duration: 0.4, delay: item.delay },
+            scale: { duration: 0.45, delay: item.delay },
+            y: {
+              duration: item.duration,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: item.delay,
+            },
+            x: {
+              duration: item.duration + 0.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: item.delay,
+            },
+            rotate: {
+              duration: item.duration + 0.9,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: item.delay,
+            },
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RevealCard({
+  image,
+  label,
+  revealed,
+  accent,
+  delay,
+  onClick,
+  disabled = false,
+  isJoe = false,
+  joeCentered = false,
+}: {
+  image: string;
+  label: string;
+  revealed: boolean;
+  accent: string;
+  delay: number;
+  onClick?: () => void;
+  disabled?: boolean;
+  isJoe?: boolean;
+  joeCentered?: boolean;
+}) {
+  const isDimmed = joeCentered && !isJoe;
+  const isFocused = joeCentered && isJoe;
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || revealed}
+      initial={{ opacity: 0, y: 40, scale: 0.9 }}
+      animate={{
+        opacity: isDimmed ? 0.2 : 1,
+        scale: isFocused ? 1.18 : isDimmed ? 0.7 : 1,
+        filter: isDimmed ? "blur(2px)" : "none",
+      }}
+      whileHover={!disabled && !revealed && !joeCentered ? { y: -8, scale: 1.03 } : {}}
+      whileTap={!disabled && !revealed ? { scale: 0.97 } : {}}
+      transition={{ delay, duration: 0.6 }}
+      className="group relative w-[170px] sm:w-[220px] md:w-[360px] lg:w-[420px]"
+      style={{
+        cursor: disabled || revealed ? "default" : "pointer",
+        zIndex: isFocused ? 40 : 10,
+      }}
+    >
+      <div className="relative overflow-hidden rounded-[26px]">
+        <img
+          src={image}
+          alt={label}
+          className="w-full aspect-square object-cover select-none rounded-[26px] transition-transform duration-500 group-hover:scale-105"
+        />
+      </div>
+
+      {revealed && !isJoe && !joeCentered && (
         <motion.div
-          className="absolute inset-0 flex flex-col items-center justify-center px-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="mt-4 text-center"
         >
-          <motion.h1
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", damping: 12, stiffness: 100 }}
-            className="font-serif text-7xl md:text-9xl lg:text-[12rem] font-bold text-primary tracking-tight"
-          >
-            MÁLAGA
-          </motion.h1>
-
-          {/* Dates */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-4 text-2xl md:text-3xl text-foreground/80 font-serif"
-          >
-            {typedDates}
-            <span className="animate-pulse">|</span>
-          </motion.p>
-
-          {/* Photo placeholders */}
-          {stage >= 4 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-4 mt-10"
-            >
-              {[
-                { color: "oklch(0.75 0.12 65)", label: "praia" },
-                { color: "oklch(0.65 0.18 30)", label: "tapas" },
-                { color: "oklch(0.6 0.12 200)", label: "sol" },
-              ].map((photo, i) => (
-                <motion.div
-                  key={photo.label}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.2 }}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className="w-20 h-20 md:w-28 md:h-28 rounded-lg shadow-lg"
-                    style={{ backgroundColor: photo.color }}
-                  />
-                  <span className="mt-2 text-xs text-muted-foreground italic">{photo.label}</span>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {/* Dog (Potato) with beach hat */}
-          {stage >= 4.5 && (
-            <motion.div
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ type: "spring", damping: 15 }}
-              className="absolute bottom-8 right-4 md:right-12 z-20"
-            >
-              <div className="relative">
-                {/* Dog image */}
-                <img
-                  src="/cadela.jpeg"
-                  alt="Potato the dog"
-                  className="w-36 md:w-44 h-auto rounded-lg shadow-xl object-cover"
-                  style={{ aspectRatio: "1/1", objectFit: "cover" }}
-                />
-                
-                {/* Beach hat SVG overlay */}
-                <svg
-                  className="absolute -top-8 left-1/2 -translate-x-1/2 w-20 md:w-24 h-auto"
-                  viewBox="0 0 100 50"
-                >
-                  {/* Hat brim */}
-                  <ellipse cx="50" cy="42" rx="45" ry="8" fill="#f4d03f" stroke="#d4a017" strokeWidth="1" />
-                  {/* Hat dome */}
-                  <ellipse cx="50" cy="30" rx="28" ry="18" fill="#f4d03f" stroke="#d4a017" strokeWidth="1" />
-                  {/* Hat band */}
-                  <rect x="22" y="36" width="56" height="6" fill="#e74c3c" />
-                </svg>
-                
-                {/* Speech bubble */}
-                <div
-                  className="absolute -left-32 md:-left-40 top-4 bg-white rounded-lg px-3 py-2 shadow-md"
-                  style={{ minWidth: "120px" }}
-                >
-                  <p className="text-[11px] md:text-xs text-gray-700 italic font-serif leading-tight">
-                    ela ficou em casa.
-                    <br />
-                    com inveja.
-                  </p>
-                  {/* Speech bubble tail */}
-                  <div
-                    className="absolute right-0 top-1/2 translate-x-2 -translate-y-1/2 w-0 h-0"
-                    style={{
-                      borderTop: "6px solid transparent",
-                      borderBottom: "6px solid transparent",
-                      borderLeft: "8px solid white",
-                    }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Final message */}
-          {stage >= 5 && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-12 text-xl md:text-2xl text-foreground font-serif text-center max-w-md"
-            >
-              {typedMessage}
-              <span className="animate-pulse">|</span>
-            </motion.p>
-          )}
+          <h3 className="text-white text-2xl md:text-3xl font-serif">{label}</h3>
+          <div
+            className="mt-3 h-1.5 mx-auto rounded-full"
+            style={{
+              width: "120px",
+              background: accent,
+              boxShadow: `0 0 18px ${accent}`,
+            }}
+          />
         </motion.div>
       )}
+    </motion.button>
+  );
+}
+
+function BoardingPassSequence({
+  start,
+  onComplete,
+}: {
+  start: boolean;
+  onComplete?: () => void;
+}) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+    setStep(1);
+  }, [start]);
+
+  useEffect(() => {
+    if (step === 4) {
+      const t = setTimeout(() => {
+        onComplete?.();
+      }, 900);
+      return () => clearTimeout(t);
+    }
+  }, [step, onComplete]);
+
+  return (
+    <div
+      className="relative rounded-[28px] overflow-hidden"
+      style={{
+        background: `
+          linear-gradient(135deg, #fffaf2 0%, #f4e6ce 58%, #ead6b8 100%),
+          repeating-linear-gradient(
+            0deg,
+            rgba(90,60,30,0.025) 0px,
+            rgba(90,60,30,0.025) 1px,
+            transparent 1px,
+            transparent 5px
+          )
+        `,
+        boxShadow: "0 28px 80px rgba(0,0,0,0.45)",
+        border: "1px solid rgba(80,40,20,0.12)",
+      }}
+    >
+      <div className="grid md:grid-cols-[1fr_230px]">
+        <div className="p-8 md:p-10">
+          <p className="text-[11px] md:text-xs uppercase tracking-[0.35em] text-black/45 font-mono">
+            passageiro confirmado
+          </p>
+
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <h2 className="text-4xl md:text-6xl text-black font-serif">Boarding Pass</h2>
+            <div className="hidden md:flex flex-col items-end">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-black/35 font-mono">
+                air amor
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-black/35 font-mono">
+                special flight
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-7">
+            <div className="grid grid-cols-[70px_1fr] md:grid-cols-[90px_1fr] gap-3 items-start">
+              <div className="text-[11px] md:text-xs uppercase tracking-[0.28em] text-black/45 font-mono pt-2">
+                DE
+              </div>
+              {step > 1 ? (
+                <p
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}
+                >
+                  Porto
+                </p>
+              ) : (
+                <TypeLine
+                  text="Porto"
+                  start={step === 1}
+                  speed={185}
+                  onDone={() => setStep(2)}
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  cursorColorClass="text-black/60"
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-[70px_1fr] md:grid-cols-[90px_1fr] gap-3 items-start">
+              <div className="text-[11px] md:text-xs uppercase tracking-[0.28em] text-black/45 font-mono pt-2">
+                PARA
+              </div>
+              {step > 2 ? (
+                <p
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}
+                >
+                  Málaga
+                </p>
+              ) : (
+                <TypeLine
+                  text="Málaga"
+                  start={step === 2}
+                  speed={300}
+                  onDone={() => setStep(3)}
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  cursorColorClass="text-black/60"
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-[70px_1fr] md:grid-cols-[90px_1fr] gap-3 items-start">
+              <div className="text-[11px] md:text-xs uppercase tracking-[0.28em] text-black/45 font-mono pt-2">
+                DATA
+              </div>
+              {step > 3 ? (
+                <p
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}
+                >
+                  19–22 Setembro
+                </p>
+              ) : (
+                <TypeLine
+                  text="19–22 Setembro"
+                  start={step === 3}
+                  speed={180}
+                  onDone={() => setStep(4)}
+                  className="text-2xl md:text-4xl text-black leading-relaxed italic"
+                  cursorColorClass="text-black/60"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t md:border-t-0 md:border-l border-black/10 p-6 md:p-8 flex flex-col justify-between bg-black/[0.035] relative">
+          <div>
+            {step >= 3 && (
+              <>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-[10px] uppercase tracking-[0.32em] text-black/40 font-mono"
+                >
+                  destino
+                </motion.p>
+
+                <motion.h3
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mt-3 text-3xl md:text-4xl text-black italic"
+                  style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}
+                >
+                  Málaga
+                </motion.h3>
+              </>
+            )}
+          </div>
+
+          <div className="mt-8">
+            <div className="h-24 md:h-28 rounded-xl bg-black/10 flex items-center justify-center overflow-hidden">
+              <div className="flex gap-[3px] opacity-70">
+                {Array.from({ length: 26 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="block bg-black"
+                    style={{
+                      width: i % 3 === 0 ? "3px" : "1px",
+                      height: `${28 + ((i * 7) % 32)}px`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute top-5 right-5 text-[10px] uppercase tracking-[0.3em] text-black/35 font-mono">
+            gate open
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute top-0 bottom-0 right-[230px] hidden md:flex items-center translate-x-1/2">
+        <div className="w-8 h-8 rounded-full bg-[#0b0913]" />
+      </div>
+
+      <div
+        className="absolute top-0 bottom-0 right-[230px] hidden md:block"
+        style={{
+          width: "1px",
+          borderRight: "2px dashed rgba(0,0,0,0.18)",
+        }}
+      />
+    </div>
+  );
+}
+
+function FinalSequence({
+  start,
+  onComplete,
+}: {
+  start: boolean;
+  onComplete?: () => void;
+}) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+    setStep(1);
+  }, [start]);
+
+  useEffect(() => {
+    if (step === 5) {
+      const t = setTimeout(() => {
+        onComplete?.();
+      }, 1800);
+      return () => clearTimeout(t);
+    }
+  }, [step, onComplete]);
+
+  return (
+    <div className="space-y-5 md:space-y-7">
+      <div className="flex items-center justify-center gap-3 md:gap-4 flex-wrap">
+        {step > 1 ? (
+          <>
+            <p className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed">
+              Parabéns, meu amor
+            </p>
+            <motion.span
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: [1, 1.12, 1] }}
+              transition={{
+                opacity: { duration: 0.4 },
+                scale: { repeat: Infinity, duration: 1.3 },
+              }}
+              className="text-4xl md:text-5xl"
+            >
+              ❤️
+            </motion.span>
+          </>
+        ) : (
+          <TypeLine
+            text="Parabéns, meu amor"
+            start={step === 1}
+            speed={140}
+            onDone={() => setStep(2)}
+            className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed"
+          />
+        )}
+      </div>
+
+      {step >= 2 && (
+        <>
+          {step > 2 ? (
+            <p className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed">
+              Espero que tenhas gostado.
+            </p>
+          ) : (
+            <TypeLine
+              text="Espero que tenhas gostado."
+              start={step === 2}
+              speed={140}
+              onDone={() => setStep(3)}
+              className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed"
+            />
+          )}
+        </>
+      )}
+
+      {step >= 3 && (
+        <>
+          {step > 3 ? (
+            <p className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed">
+              Amo-te muito.
+            </p>
+          ) : (
+            <TypeLine
+              text="Amo-te muito."
+              start={step === 3}
+              speed={140}
+              onDone={() => setStep(4)}
+              className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed"
+            />
+          )}
+        </>
+      )}
+
+      {step >= 4 && (
+        <>
+          {step > 4 ? (
+            <p className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed">
+              (Afinal também sei fazer umas coisas engraçadas com o trabalho).
+            </p>
+          ) : (
+            <TypeLine
+              text="(Afinal também sei fazer umas coisas engraçadas com o trabalho)."
+              start={step === 4}
+              speed={98}
+              onDone={() => setStep(5)}
+              className="text-xl md:text-3xl lg:text-4xl text-white font-serif text-center leading-relaxed"
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export function MapReveal({ onComplete }: MapRevealProps) {
+  const [phase, setPhase] = useState<Phase>("cards");
+  const [revealed, setRevealed] = useState<string[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [joeCentered, setJoeCentered] = useState(false);
+  const [lockedFinal, setLockedFinal] = useState(true);
+  const [showBoardingPass, setShowBoardingPass] = useState(false);
+  const [startFinal, setStartFinal] = useState(false);
+
+  const handleRevealCard = (id: string) => {
+    if (revealed.includes(id)) return;
+
+    if (
+      id === "joe" &&
+      (lockedFinal || !revealed.includes("hatchi") || !revealed.includes("kikinha"))
+    ) {
+      return;
+    }
+
+    const updated = [...revealed, id];
+    setRevealed(updated);
+
+    if (updated.includes("hatchi") && updated.includes("kikinha")) {
+      setLockedFinal(false);
+    }
+
+    if (id === "joe") {
+      setJoeCentered(true);
+      setShowCelebration(true);
+
+      setTimeout(() => {
+        setPhase("boarding-pass");
+      }, 1100);
+
+      setTimeout(() => {
+        setShowBoardingPass(true);
+      }, 1450);
+    }
+  };
+
+  const handleBoardingComplete = () => {
+    setTimeout(() => {
+      setPhase("final");
+      setStartFinal(true);
+    }, 1200);
+  };
+
+  return (
+    <div className="fixed inset-0 overflow-hidden bg-[radial-gradient(circle_at_top,_#1b1024_0%,_#0b0913_45%,_#050507_100%)]">
+      {showCelebration && <Confetti />}
+
+      <AnimatePresence mode="wait">
+        {phase === "cards" && (
+          <motion.section
+            key="cards"
+            className="absolute inset-0 px-4 md:px-8 py-6 md:py-14 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0.98 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="min-h-full flex flex-col">
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center mb-8 md:mb-12"
+              >
+                <p
+                  className="uppercase tracking-[0.28em] sm:tracking-[0.38em] text-white/50 text-[10px] sm:text-xs md:text-sm"
+                  style={{ fontFamily: "'Courier New', monospace" }}
+                >
+                  escolhe o teu destino
+                </p>
+                <h2 className="mt-3 text-white font-serif text-2xl sm:text-3xl md:text-5xl">
+                  Qual será o verdadeiro?
+                </h2>
+              </motion.div>
+
+              <div className="flex-1 flex flex-col xl:flex-row items-center justify-start xl:justify-center gap-6 md:gap-8 xl:gap-10 pb-8">
+                <RevealCard
+                  image="/hatchi.png"
+                  label="Gandra Vegas"
+                  revealed={revealed.includes("hatchi")}
+                  accent="#f59e0b"
+                  delay={0.1}
+                  onClick={() => handleRevealCard("hatchi")}
+                  joeCentered={joeCentered}
+                />
+
+                <RevealCard
+                  image="/kikinha.png"
+                  label="Moselos Beach"
+                  revealed={revealed.includes("kikinha")}
+                  accent="#38bdf8"
+                  delay={0.2}
+                  onClick={() => handleRevealCard("kikinha")}
+                  joeCentered={joeCentered}
+                />
+
+                <RevealCard
+                  image="/joe.png"
+                  label="Málaga"
+                  revealed={revealed.includes("joe")}
+                  accent="#ef4444"
+                  delay={0.3}
+                  onClick={() => handleRevealCard("joe")}
+                  disabled={lockedFinal}
+                  isJoe
+                  joeCentered={joeCentered}
+                />
+              </div>
+
+              <div className="min-h-[80px] mt-6 flex items-center justify-center">
+                {!revealed.includes("joe") ? (
+                  <motion.p
+                    key={`hint-${revealed.length}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-white/60 italic text-center font-serif text-lg md:text-2xl"
+                  >
+                    {lockedFinal
+                      ? "revela primeiro os dois destinos falsos..."
+                      : "agora sim. falta descobrir o verdadeiro."}
+                  </motion.p>
+                ) : null}
+              </div>
+            </div>
+          </motion.section>
+        )}
+
+        {phase === "boarding-pass" && (
+          <motion.section
+            key="boarding-pass"
+            className="absolute inset-0 flex items-center justify-center px-6"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                initial={{ scale: 1.18, opacity: 1 }}
+                animate={{
+                  scale: showBoardingPass ? 0.78 : 1.18,
+                  opacity: showBoardingPass ? 0.18 : 1,
+                  y: showBoardingPass ? -18 : 0,
+                }}
+                transition={{ duration: 0.6 }}
+                className="w-[220px] sm:w-[280px] md:w-[360px] lg:w-[420px]"
+              >
+                <img
+                  src="/joe.png"
+                  alt="Joe"
+                  className="w-full aspect-square object-cover rounded-[26px] shadow-2xl"
+                />
+              </motion.div>
+            </div>
+
+            <AnimatePresence>
+              {showBoardingPass && (
+                <motion.div
+                  key="pass"
+                  initial={{ opacity: 0, scale: 0.22, rotate: -10, y: 90 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: "spring", damping: 13, stiffness: 100 }}
+                  className="relative z-20 w-full max-w-3xl"
+                >
+                  <BoardingPassSequence start={showBoardingPass} onComplete={handleBoardingComplete} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.section>
+        )}
+
+        {phase === "final" && (
+          <motion.section
+            key="final"
+            className="absolute inset-0 flex items-center justify-center px-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <FloatingMorangos />
+
+            <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center gap-6 md:gap-8">
+              <FinalSequence start={startFinal} onComplete={onComplete} />
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

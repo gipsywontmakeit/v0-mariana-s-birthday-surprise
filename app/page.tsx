@@ -1,168 +1,72 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SleepingEyes, SleepingEyesRef } from "@/components/sleeping-eyes";
+import { SleepingScene } from "@/components/sleeping-scene";
 import { EvidenceBoard } from "@/components/evidence-board";
 import { Typewriter } from "@/components/typewriter";
 import { PlaneAnimation } from "@/components/plane-animation";
-import { Narrator } from "@/components/narrator";
 import { MapReveal } from "@/components/map-reveal";
 import { Button } from "@/components/ui/button";
 
-type Screen = 
-  | "wake-act1" 
+type Screen =
+  | "wake-act1"
   | "fade-to-black"
   | "two-hours-later"
-  | "wake-act2" 
-  | "investigation" 
-  | "proverbio" 
-  | "tease" 
+  | "wake-act2"
+  | "investigation"
+  | "proverbio"
+  | "tease"
+  | "reveal-question"
   | "reveal-map";
 
 export default function BirthdaySurprise() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("wake-act1");
-  const [wakeTextStage, setWakeTextStage] = useState(0);
-  const [showWakeButton, setShowWakeButton] = useState(false);
-  const [showWakeText, setShowWakeText] = useState(false);
-  const eyesRef = useRef<SleepingEyesRef>(null);
-  const eyesRef2 = useRef<SleepingEyesRef>(null);
+  const [act1DragDone, setAct1DragDone] = useState(false);
+  const [act2DragDone, setAct2DragDone] = useState(false);
+  const [showSecondWakeButton, setShowSecondWakeButton] = useState(false);
   const [showPlane, setShowPlane] = useState(false);
   const [showFinalButton, setShowFinalButton] = useState(false);
   const [showInvestigationButton, setShowInvestigationButton] = useState(false);
 
-  // Wake-up Act 1 text sequence (triggered by SleepingEyes after 3 seconds)
-  const handleTextReadyAct1 = () => {
-    setShowWakeText(true);
-    const timings = [0, 1500, 3000, 4000];
-    timings.forEach((time, index) => {
-      setTimeout(() => {
-        if (index < 3) {
-          setWakeTextStage(index + 1);
-        } else {
-          setShowWakeButton(true);
-        }
-      }, time);
-    });
+  const handleAct1DragComplete = () => {
+    setAct1DragDone(true);
+    setTimeout(() => {
+      setCurrentScreen("fade-to-black");
+      setTimeout(() => setCurrentScreen("two-hours-later"), 800);
+    }, 1200);
   };
 
-  // Wake-up Act 2 text sequence (triggered by SleepingEyes after 3 seconds)
-  const handleTextReadyAct2 = () => {
-    setShowWakeText(true);
-    const timings = [0, 1500, 3000, 4000];
-    timings.forEach((time, index) => {
-      setTimeout(() => {
-        if (index < 3) {
-          setWakeTextStage(index + 1);
-        } else {
-          setShowWakeButton(true);
-        }
-      }, time);
-    });
+  const handleAct2DragComplete = () => {
+    setAct2DragDone(true);
+    setTimeout(() => setShowSecondWakeButton(true), 1800);
   };
-  
-  // Reset state when entering act 2
+
   useEffect(() => {
     if (currentScreen === "wake-act2") {
-      setWakeTextStage(0);
-      setShowWakeButton(false);
-      setShowWakeText(false);
+      setAct2DragDone(false);
+      setShowSecondWakeButton(false);
     }
   }, [currentScreen]);
 
-  // Auto-advance from proverbio
   useEffect(() => {
     if (currentScreen !== "proverbio") return;
-    
-    const timer = setTimeout(() => {
-      setCurrentScreen("tease");
-    }, 5000);
-    
+    const timer = setTimeout(() => setCurrentScreen("tease"), 5000);
     return () => clearTimeout(timer);
   }, [currentScreen]);
 
-  // Reveal final sequence
-  useEffect(() => {
-    if (currentScreen !== "reveal-final") return;
-    
-    // Timings: 1=Malaga, 2=dates, 3=photo placeholder, 3.5=dog polaroid, 4=final message
-    const stages = [
-      { time: 800, stage: 1 },
-      { time: 2000, stage: 2 },
-      { time: 3200, stage: 3 },
-      { time: 4000, stage: 3.5 },
-      { time: 5200, stage: 4 },
-    ];
-    
-    stages.forEach(({ time, stage }) => {
-      setTimeout(() => {
-        setRevealStage(stage);
-        if (stage === 1) {
-          setShowConfetti(true);
-        }
-      }, time);
-    });
-  }, [currentScreen]);
-
-  const handleFirstWake = async () => {
-    // Eyes open slightly then slam shut
-    if (eyesRef.current) {
-      await eyesRef.current.openAndClose();
-    }
-    
-    setWakeTextStage(0);
-    setShowWakeButton(false);
-    setShowWakeText(false);
-    setCurrentScreen("fade-to-black");
-    
-    // Fade to black, then show "2 horas depois..."
-    setTimeout(() => {
-      setCurrentScreen("two-hours-later");
-    }, 800);
-  };
-
-  const handleSecondWake = () => {
-    setCurrentScreen("investigation");
-  };
-
-  const handleInvestigationComplete = () => {
-    setShowInvestigationButton(true);
-  };
-
-  const handleInvestigationContinue = () => {
-    setCurrentScreen("proverbio");
-  };
-
-  const handleTeaseComplete = () => {
-    setShowPlane(true);
-  };
-
-  const handlePlaneComplete = () => {
-    setShowFinalButton(true);
-  };
-
-  const handleFinalButton = () => {
-    setCurrentScreen("reveal-question");
-  };
-
-  const handleProverbioClick = () => {
-    setCurrentScreen("tease");
-  };
-
-  const handleStartDecryption = () => {
-    setCurrentScreen("reveal-decrypting");
-  };
-
-  const handleDecryptionComplete = () => {
-    setTimeout(() => {
-      setCurrentScreen("reveal-final");
-    }, 500);
-  };
+  const handleSecondWake = () => setCurrentScreen("investigation");
+  const handleInvestigationComplete = () => setShowInvestigationButton(true);
+  const handleInvestigationContinue = () => setCurrentScreen("proverbio");
+  const handleTeaseComplete = () => setShowPlane(true);
+  const handlePlaneComplete = () => setShowFinalButton(true);
+  const handleFinalButton = () => setCurrentScreen("reveal-question");
+  const handleProverbioClick = () => setCurrentScreen("tease");
+  const handleStartReveal = () => setCurrentScreen("reveal-map");
 
   return (
     <main className="min-h-screen bg-background overflow-hidden">
       <AnimatePresence mode="wait">
-        {/* Screen 1 - Wake-up Act 1 */}
         {currentScreen === "wake-act1" && (
           <motion.section
             key="wake-act1"
@@ -172,73 +76,15 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <SleepingEyes ref={eyesRef} onTextReady={handleTextReadyAct1} />
-            
-            {/* Text appears BELOW the eyes after 3 seconds */}
-            <AnimatePresence>
-              {showWakeText && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-end pb-[20vh] pointer-events-none"
-                >
-                  <Narrator text="Era uma vez uma rapariga que dormia muito..." />
-                  
-                  <div className="space-y-4 text-center pointer-events-auto">
-                    <AnimatePresence>
-                      {wakeTextStage >= 1 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-3xl md:text-5xl text-foreground/70"
-                        >
-                          Mariana.
-                        </motion.h2>
-                      )}
-                      {wakeTextStage >= 2 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-3xl md:text-5xl text-foreground/85"
-                        >
-                          Mariana.
-                        </motion.h2>
-                      )}
-                      {wakeTextStage >= 3 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-4xl md:text-6xl text-foreground font-bold"
-                        >
-                          MARIANA.
-                        </motion.h2>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  
-                  {showWakeButton && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="mt-8 pointer-events-auto"
-                    >
-                      <Button
-                        onClick={handleFirstWake}
-                        variant="outline"
-                        className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
-                      >
-                        Ok ok, já acordei
-                      </Button>
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <SleepingScene
+              photoSrc="/bom_dia.png"
+              wakeLines={["Mariana.", "Mariana.", "MARIANA."]}
+              onDragComplete={handleAct1DragComplete}
+              zsFrozen={act1DragDone}
+            />
           </motion.section>
         )}
 
-        {/* Fade to black */}
         {currentScreen === "fade-to-black" && (
           <motion.section
             key="fade-to-black"
@@ -250,7 +96,6 @@ export default function BirthdaySurprise() {
           />
         )}
 
-        {/* "2 horas depois..." title card */}
         {currentScreen === "two-hours-later" && (
           <motion.section
             key="two-hours-later"
@@ -260,19 +105,16 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 3, times: [0, 0.2, 0.8, 1] }}
-              onAnimationComplete={() => setCurrentScreen("wake-act2")}
-              className="font-serif text-2xl md:text-4xl text-foreground/80 italic"
-            >
-              2 horas depois...
-            </motion.p>
+            <Typewriter
+              lines={["2 horas depois..."]}
+              typingSpeed={80}
+              lineDelay={1200}
+              className="font-serif text-2xl sm:text-3xl md:text-4xl text-foreground/80 italic text-center"
+              onComplete={() => setTimeout(() => setCurrentScreen("wake-act2"), 800)}
+            />
           </motion.section>
         )}
 
-        {/* Screen 1 - Wake-up Act 2 */}
         {currentScreen === "wake-act2" && (
           <motion.section
             key="wake-act2"
@@ -282,79 +124,86 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <SleepingEyes ref={eyesRef2} onTextReady={handleTextReadyAct2} />
-            
-            {/* Text appears BELOW the eyes after 3 seconds */}
+            <SleepingScene
+              photoSrc="/ja_acordei.png"
+              photoSize="clamp(180px, 35vw, 240px)"
+              speechText="JÁ ESTOU ACORDADA QUE QUERES"
+              wakeLines={["Mariana.", "MARIANA.", "MARIANA, A SÉRIO."]}
+              act2={true}
+              onDragComplete={handleAct2DragComplete}
+              zsFrozen={act2DragDone}
+            />
+
             <AnimatePresence>
-              {showWakeText && (
+              {showSecondWakeButton && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-end pb-[20vh] pointer-events-none"
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute bottom-6 sm:bottom-8 md:bottom-10 right-3 sm:right-6 md:right-10 z-30"
                 >
-                  <div className="space-y-4 text-center pointer-events-auto">
-                    <AnimatePresence>
-                      {wakeTextStage >= 1 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-3xl md:text-5xl text-foreground/70"
-                        >
-                          Mariana.
-                        </motion.h2>
-                      )}
-                      {wakeTextStage >= 2 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-4xl md:text-6xl text-foreground font-bold"
-                        >
-                          MARIANA.
-                        </motion.h2>
-                      )}
-                      {wakeTextStage >= 3 && (
-                        <motion.h2
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="font-serif text-4xl md:text-6xl text-primary font-bold"
-                        >
-                          MARIANA, A SÉRIO.
-                        </motion.h2>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  
-                  {showWakeButton && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="mt-8 flex flex-col items-center gap-3 pointer-events-auto"
+                  <motion.button
+                    onClick={handleSecondWake}
+                    whileHover={{ scale: 1.04, y: -4 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="relative flex flex-col items-center"
+                  >
+                    <div
+                      style={{
+                        background: "white",
+                        borderRadius: "22px",
+                        padding: "10px 14px",
+                        marginBottom: "10px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+                        position: "relative",
+                        maxWidth: "220px",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                      }}
                     >
-                      <Button
-                        onClick={handleSecondWake}
-                        variant="outline"
-                        className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
+                      <p
+                        style={{
+                          color: "#111",
+                          fontWeight: 700,
+                          fontSize: "13px",
+                          textAlign: "center",
+                          lineHeight: 1.35,
+                          fontFamily: "Georgia, serif",
+                        }}
                       >
-                        Ok, agora acordei mesmo
-                      </Button>
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.5 }}
-                        transition={{ delay: 0.8 }}
-                        className="text-sm text-muted-foreground italic"
-                      >
-                        (desta vez a culpa não é da medicação)
-                      </motion.p>
-                    </motion.div>
-                  )}
+                        CLICA EM MIM RÁPIDO PARA NÃO ME PASSAR JÁ
+                      </p>
+
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          width: 0,
+                          height: 0,
+                          borderLeft: "10px solid transparent",
+                          borderRight: "10px solid transparent",
+                          borderTop: "14px solid white",
+                        }}
+                      />
+                    </div>
+
+                    <img
+                      src="/nervos.png"
+                      alt="Mariana nervosa"
+                      className="w-28 sm:w-36 md:w-48 lg:w-56 h-auto object-contain"
+                      style={{
+                        filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.4))",
+                      }}
+                    />
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.section>
         )}
 
-        {/* Screen 2 - Investigation */}
         {currentScreen === "investigation" && (
           <motion.section
             key="investigation"
@@ -364,20 +213,7 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Full-screen evidence board */}
             <EvidenceBoard onAllRevealed={handleInvestigationComplete} />
-            
-            {/* Title overlay */}
-            <motion.h2
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="absolute top-6 left-0 right-0 font-serif text-xl md:text-3xl text-foreground/90 text-center z-30 px-4"
-            >
-              Passámos a noite a investigar.
-            </motion.h2>
-            
-            {/* Continue button */}
             <AnimatePresence>
               {showInvestigationButton && (
                 <motion.div
@@ -385,12 +221,12 @@ export default function BirthdaySurprise() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="absolute bottom-8 left-0 right-0 flex justify-center z-30"
+                  className="absolute bottom-6 sm:bottom-8 left-0 right-0 flex justify-center z-30"
                 >
                   <Button
                     onClick={handleInvestigationContinue}
                     variant="outline"
-                    className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg bg-background/80 backdrop-blur-sm"
+                    className="border-primary/50 text-foreground hover:bg-primary/10 px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg bg-background/80 backdrop-blur-sm"
                   >
                     Ok, e então?
                   </Button>
@@ -400,7 +236,6 @@ export default function BirthdaySurprise() {
           </motion.section>
         )}
 
-        {/* Screen 3 - Proverbio */}
         {currentScreen === "proverbio" && (
           <motion.section
             key="proverbio"
@@ -411,22 +246,20 @@ export default function BirthdaySurprise() {
             transition={{ duration: 1 }}
             onClick={handleProverbioClick}
           >
-            <Narrator text="Mas o universo tinha outros planos." />
-            
             <motion.blockquote
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, duration: 1 }}
               className="text-center max-w-2xl"
             >
-              <p className="font-serif text-3xl md:text-5xl lg:text-6xl text-foreground italic leading-tight">
+              <p className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-foreground italic leading-tight">
                 {'"'}Quem dorme não apanha peixes.{'"'}
               </p>
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 2 }}
-                className="mt-8 text-xl md:text-2xl text-primary font-medium"
+                className="mt-8 text-lg sm:text-xl md:text-2xl text-primary font-medium"
               >
                 Mas desta vez apanhaste.
               </motion.p>
@@ -434,7 +267,6 @@ export default function BirthdaySurprise() {
           </motion.section>
         )}
 
-        {/* Screen 4 - Tease */}
         {currentScreen === "tease" && (
           <motion.section
             key="tease"
@@ -444,42 +276,48 @@ export default function BirthdaySurprise() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Narrator text="Alguém tinha estado muito ocupado." />
-            
-            <div className="max-w-xl w-full text-center mt-8">
-              <Typewriter
-                lines={[
-                  "Fiz uma coisa.",
-                  "Uma coisa que vai precisar de mala.",
-                  "E protetor solar.",
-                  "E de acordares cedo.",
-                ]}
-                onComplete={handleTeaseComplete}
-                typingSpeed={70}
-                lineDelay={1000}
-                className="mb-12"
-              />
-              
+            <div className="max-w-xl w-full text-center flex flex-col items-center">
+              <div className="min-h-[260px] sm:min-h-[300px] w-full">
+                <Typewriter
+                  lines={[
+                    "Fiz uma coisa.",
+                    "Uma coisa… que ainda não sabes.",
+                    "Mas vais descobrir.",
+                    "E vais gostar.",
+                    "Muito.",
+                    "Só que há um problema.",
+                    "Não dá para fazer de pijama.",
+                    "Nem deitada no sofá.",
+                    "Vai precisar de energia.",
+                    "E talvez… um bocadinho de descanso.",
+                    "Ah…",
+                    "E também vais precisar de mala.",
+                    "E protetor solar.",
+                    "E de acordares cedo.",
+                  ]}
+                  onComplete={handleTeaseComplete}
+                  typingSpeed={70}
+                  lineDelay={1000}
+                  className="mb-12"
+                />
+              </div>
+
               {showPlane && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-8"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 sm:mt-8">
                   <PlaneAnimation onComplete={handlePlaneComplete} />
                 </motion.div>
               )}
-              
+
               {showFinalButton && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-8"
+                  className="mt-6 sm:mt-8"
                 >
                   <Button
                     onClick={handleFinalButton}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-10 py-7 text-xl font-medium"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 sm:px-10 py-6 sm:py-7 text-lg sm:text-xl font-medium"
                   >
                     Okaaaaaaaaaaaaaaay, letz go
                   </Button>
@@ -489,7 +327,6 @@ export default function BirthdaySurprise() {
           </motion.section>
         )}
 
-        {/* Screen 5 - Reveal: Question */}
         {currentScreen === "reveal-question" && (
           <motion.section
             key="reveal-question"
@@ -503,199 +340,56 @@ export default function BirthdaySurprise() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="font-serif text-3xl md:text-5xl text-foreground text-center mb-12"
+              className="font-serif text-3xl sm:text-4xl md:text-5xl text-foreground text-center mb-12"
             >
               Então, para onde vamos?
             </motion.h2>
-            
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
+
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.2, type: "spring", damping: 14 }}
+              whileHover={{ scale: 1.06, y: -6 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleStartReveal}
+              className="flex flex-col items-center gap-4"
             >
-              <Button
-                onClick={handleStartDecryption}
-                variant="outline"
-                className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg"
+              <motion.img
+                src="/cadela.jpeg"
+                alt="Descobrir destino"
+                className="w-64 md:w-80 lg:w-[22rem] h-auto object-contain"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ repeat: Infinity, duration: 2.5 }}
+                style={{
+                  filter: `
+                    drop-shadow(0 0 0 white)
+                    drop-shadow(0 0 8px white)
+                    drop-shadow(0 0 16px white)
+                    drop-shadow(0 10px 25px rgba(0,0,0,0.45))
+                  `,
+                }}
+              />
+
+              <span
+                className="text-white font-serif text-xl md:text-2xl drop-shadow-lg"
+                style={{ textShadow: "0 0 12px rgba(255,255,255,0.35)" }}
               >
                 Descobrir destino
-              </Button>
-            </motion.div>
+              </span>
+            </motion.button>
           </motion.section>
         )}
 
-        {/* Screen 5 - Reveal: Decrypting */}
-        {currentScreen === "reveal-decrypting" && (
+        {currentScreen === "reveal-map" && (
           <motion.section
-            key="reveal-decrypting"
-            className="fixed inset-0 flex flex-col items-center justify-center px-6"
+            key="reveal-map"
+            className="fixed inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-muted-foreground text-sm mb-4 tracking-widest uppercase">
-              A desencriptar destino...
-            </p>
-            
-            <div className="text-5xl md:text-7xl font-bold">
-              <DecryptionReveal 
-                targetText="MÁLAGA" 
-                onComplete={handleDecryptionComplete}
-              />
-            </div>
-            
-            {/* Progress bar */}
-            <motion.div
-              className="mt-8 w-64 h-1 bg-secondary rounded-full overflow-hidden"
-            >
-              <motion.div
-                className="h-full bg-primary"
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 2.5, ease: "linear" }}
-              />
-            </motion.div>
-          </motion.section>
-        )}
-
-        {/* Screen 5 - Reveal: Final */}
-        {currentScreen === "reveal-final" && (
-          <motion.section
-            key="reveal-final"
-            className="fixed inset-0 flex flex-col items-center justify-center px-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Narrator text="Fim. Ou melhor — início." delay={3} />
-            
-            {showConfetti && <Confetti />}
-            
-            <div className="text-center max-w-3xl">
-              {revealStage >= 1 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.3 }}
-                  animate={{ 
-                    opacity: 1, 
-                    scale: [0.3, 1.1, 1],
-                    x: [0, -5, 5, -5, 5, 0],
-                  }}
-                  transition={{ 
-                    duration: 0.6,
-                    times: [0, 0.6, 1],
-                    x: { delay: 0.3, duration: 0.3 }
-                  }}
-                >
-                  <h1 className="font-serif text-7xl md:text-9xl lg:text-[12rem] font-bold text-primary tracking-tight">
-                    MÁLAGA
-                  </h1>
-                </motion.div>
-              )}
-              
-              {revealStage >= 2 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-4"
-                >
-                  <Typewriter
-                    lines={["19 a 22 de Setembro"]}
-                    typingSpeed={100}
-                    className="text-2xl md:text-3xl text-foreground/80 font-serif"
-                  />
-                </motion.div>
-              )}
-              
-              {revealStage >= 3 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mt-12 mx-auto"
-                >
-                  <div className="relative w-48 h-48 md:w-64 md:h-64 mx-auto rounded-full overflow-hidden border-4 border-primary/30">
-                    {/* Photo placeholder */}
-                    <div className="absolute inset-0 bg-secondary flex items-center justify-center">
-                      <div className="text-center p-4">
-                        <div className="w-12 h-12 mx-auto mb-2 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center">
-                          <span className="text-2xl text-muted-foreground/50">+</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground/50 italic">
-                          adiciona foto aqui
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              {/* Dog polaroid - Potato stays home */}
-              {revealStage >= 3.5 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 100, x: 50, rotate: 8 }}
-                  animate={{ opacity: 1, y: 0, x: 0, rotate: 3 }}
-                  transition={{ type: "spring", damping: 15 }}
-                  className="absolute bottom-8 right-4 md:right-12 z-20"
-                >
-                  {/* Polaroid frame */}
-                  <div
-                    className="bg-white p-2 pb-10 shadow-xl"
-                    style={{ 
-                      boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
-                      width: "140px",
-                    }}
-                  >
-                    {/* Photo area */}
-                    <div className="relative w-full aspect-square bg-gray-200 overflow-hidden">
-                      <img
-                        src="/cadela.jpg"
-                        alt="Potato the dog"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
-                      {/* Fallback placeholder */}
-                      <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
-                        dog photo
-                      </div>
-                    </div>
-                    
-                    {/* Handwritten caption */}
-                    <div className="absolute bottom-2 left-0 right-0 text-center px-2">
-                      <p 
-                        className="text-[10px] text-gray-600 italic leading-tight"
-                        style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-                      >
-                        ela fica a guardar a casa. com inveja...
-                      </p>
-                      <p className="text-[8px] text-gray-500 mt-0.5">
-                        (ja tem o look de Malaga)
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              {revealStage >= 4 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-12"
-                >
-                  <Typewriter
-                    lines={[
-                      "Feliz aniversário, Mariana.",
-                      "Agora vai fazer a mala."
-                    ]}
-                    typingSpeed={60}
-                    lineDelay={800}
-                    className="text-xl md:text-2xl text-foreground font-serif"
-                  />
-                </motion.div>
-              )}
-            </div>
+            <MapReveal />
           </motion.section>
         )}
       </AnimatePresence>
